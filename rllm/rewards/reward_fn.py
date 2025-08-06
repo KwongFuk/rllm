@@ -3,8 +3,6 @@ from typing import Protocol, runtime_checkable
 from rllm.rewards.code_reward import RewardCodeFn
 from rllm.rewards.math_reward import RewardMathFn
 from rllm.rewards.reward_types import RewardConfig, RewardInput, RewardOutput
-from rllm.rewards.search_reward import RewardSearchFn
-
 
 @runtime_checkable
 class RewardFunction(Protocol):

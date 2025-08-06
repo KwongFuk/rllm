@@ -32,7 +32,9 @@ class AgentExecutionEngine:
     def __init__(
         self,
         engine_name="openai",
+        model_type="vl",
         tokenizer=None,
+        processor=None,
         rollout_engine=None,
         chat_parser=None,
         n_parallel_agents=1,
@@ -63,7 +65,11 @@ class AgentExecutionEngine:
 
         self.config = config
         self.rollout_engine = rollout_engine
-        self.tokenizer = tokenizer
+        if "vl" in model_type:
+            self.tokenizer = processor.tokenizer
+        else:
+            self.tokenizer = tokenizer
+        self.processor = processor
         self.engine_name = engine_name
         self.n_parallel_agents = n_parallel_agents
         self.overlong_filter = overlong_filter

@@ -1,0 +1,15 @@
+{
+  "MathLLMs/MathVision": {
+    "train": "/home/yue/guangfu/rllm/rllm/data/datasets/MathLLMs/MathVision/train.parquet",
+    "test": "/home/yue/guangfu/rllm/rllm/data/datasets/MathLLMs/MathVision/test.parquet"
+  },
+  "Zhiqiang007/MathV360K": {
+    "train": "/home/yue/guangfu/rllm/rllm/data/datasets/Zhiqiang007/MathV360K/train.parquet"
+  },
+  "MathV360K": {
+    "train": "/home/yue/guangfu/rllm/rllm/data/datasets/MathV360K/train.parquet"
+  },
+  "MathVision": {
+    "test": "/home/yue/guangfu/rllm/rllm/data/datasets/MathVision/test.parquet"
+  }
+}

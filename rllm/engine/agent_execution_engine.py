@@ -290,6 +290,9 @@ class AgentExecutionEngine:
 
             start_time = time.time()
             response = await self.get_model_response(prompt_messages, application_id, **kwargs)
+
+            print(f"[DEBUG][Trajectory {idx}][Step {step_idx}] Model raw response:\n{response}\n")
+
             delta_time = time.time() - start_time
             llm_time += delta_time
             total_time += delta_time
@@ -302,6 +305,8 @@ class AgentExecutionEngine:
 
             # Update agent with model response
             action: Action = agent.update_from_model(response)
+            print(f"[DEBUG][Trajectory {idx}][Step {step_idx}] Parsed agent action:\n{action.action}\n")
+
             action = action.action
 
             # Take step in environment using the executor

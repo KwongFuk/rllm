@@ -1,0 +1,5 @@
+{
+  "hotpotqa": {
+    "test": "/home/yue/guangfu/rllm/rllm/data/datasets/hotpotqa/test.parquet"
+  }
+}

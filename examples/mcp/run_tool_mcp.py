@@ -66,7 +66,8 @@ async def main():
         print("Dataset not found, preparing dataset...")
         _, test_dataset = prepare_hotpotqa_data()
 
-    tasks = test_dataset.get_data()
+    # tasks = test_dataset.get_data()
+    tasks = test_dataset.get_data()[:10]
     print(f"Running evaluation on {len(tasks)} HotpotQA tasks...")
 
     try:

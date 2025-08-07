@@ -1,5 +1,11 @@
 {
   "hotpotqa": {
     "test": "/home/yue/guangfu/rllm/rllm/data/datasets/hotpotqa/test.parquet"
+  },
+  "MathV360K": {
+    "train": "/home/yue/guangfu/rllm/rllm/data/datasets/MathV360K/train.parquet"
+  },
+  "MathVision": {
+    "test": "/home/yue/guangfu/rllm/rllm/data/datasets/MathVision/test.parquet"
   }
 }

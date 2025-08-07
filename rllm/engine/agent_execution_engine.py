@@ -25,6 +25,10 @@ from rllm.misc import colorful_print
 from rllm.parser.chat_template.parser import ChatTemplateParser
 from rllm.router.router import Router
 
+# rllm/rllm/engine/v_utils.py
+
+from rllm.rllm.engine.v_utils import ask_openai_gpt4o_with_image_async
+
 logger = logging.getLogger(__name__)
 
 
@@ -137,6 +141,8 @@ class AgentExecutionEngine:
             return await self._get_openai_async(prompt, application_id, **kwargs)
         elif self.engine_name == "verl":
             return await self._get_verl_async(prompt, application_id, **kwargs)
+        # elif self.engine_name == "openai_v":
+        #     return await self.ask_openai_gpt4o_with_image_async(image, prompt, **kwargs)
         else:
             raise NotImplementedError(f"Engine type '{self.engine_name}' not supported")
 
@@ -250,6 +256,7 @@ class AgentExecutionEngine:
         # Reset environment with the task using the executor
         loop = asyncio.get_event_loop()
         observation, info = await loop.run_in_executor(self.executor, env.reset)
+        
         info["max_steps"] = self.max_steps
 
         # Reset agent
@@ -262,6 +269,9 @@ class AgentExecutionEngine:
             info=info,
         )
         messages = agent.chat_completions
+
+        # image = agent.image
+
         prompt_tokens, _ = convert_messages_to_tokens_and_masks(messages, tokenizer=self.tokenizer, parser=self.chat_parser, contains_first_msg=True, contains_generation_msg=True)
         prompt_token_len = len(prompt_tokens)
         # Note, this should never happen!
@@ -272,6 +282,7 @@ class AgentExecutionEngine:
         for step_idx in range(self.max_steps):
             # Get action from agent
             prompt_messages = agent.chat_completions.copy()
+
             # Max remaining tokens left for the response
             # For enforced max prompt at each step, no need to deduct here
             if not self.enforce_max_prompt_length:
@@ -289,7 +300,11 @@ class AgentExecutionEngine:
             kwargs["max_tokens"] = max_tokens
 
             start_time = time.time()
+
+
+            
             response = await self.get_model_response(prompt_messages, application_id, **kwargs)
+            # response = await self.get_model_response(image, prompt_messages, application_id, **kwargs)
 
             print(f"[DEBUG][Trajectory {idx}][Step {step_idx}] Model raw response:\n{response}\n")
 

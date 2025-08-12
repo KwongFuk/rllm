@@ -27,7 +27,7 @@ from rllm.router.router import Router
 
 # rllm/rllm/engine/v_utils.py
 
-from rllm.rllm.engine.v_utils import ask_openai_gpt4o_with_image_async
+from rllm.rllm.engine.v_utils import ask_openai_gpt4o_with_image_async, convert_image_bytes_to_data_url
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ class AgentExecutionEngine:
         else:
             self.chat_parser = chat_parser
 
-    async def get_model_response(self, prompt, application_id, **kwargs):
+    async def get_model_response(self, prompt, application_id, model_use_image_url = None, **kwargs):
         """
         Compute model response asynchronously based on the engine type.
 
@@ -136,13 +136,15 @@ class AgentExecutionEngine:
 
         Raises:
             NotImplementedError: If the engine type is not supported
+
         """
+        print("***prompt***", prompt)
         if self.engine_name == "openai":
             return await self._get_openai_async(prompt, application_id, **kwargs)
         elif self.engine_name == "verl":
             return await self._get_verl_async(prompt, application_id, **kwargs)
-        # elif self.engine_name == "openai_v":
-        #     return await self.ask_openai_gpt4o_with_image_async(image, prompt, **kwargs)
+        elif self.engine_name == "openai_v":
+            return await ask_openai_gpt4o_with_image_async(model_use_image_url, prompt, application_id,**kwargs)
         else:
             raise NotImplementedError(f"Engine type '{self.engine_name}' not supported")
 
@@ -270,7 +272,12 @@ class AgentExecutionEngine:
         )
         messages = agent.chat_completions
 
-        # image = agent.image
+        image = agent.image
+        image_path = agent.image_path
+        image_bytes = agent.image_bytes
+        model_use_image_url = convert_image_bytes_to_data_url(image_bytes)
+        print("****image_path****",image_path)
+      
 
         prompt_tokens, _ = convert_messages_to_tokens_and_masks(messages, tokenizer=self.tokenizer, parser=self.chat_parser, contains_first_msg=True, contains_generation_msg=True)
         prompt_token_len = len(prompt_tokens)
@@ -303,8 +310,8 @@ class AgentExecutionEngine:
 
 
             
-            response = await self.get_model_response(prompt_messages, application_id, **kwargs)
-            # response = await self.get_model_response(image, prompt_messages, application_id, **kwargs)
+            response = await self.get_model_response(prompt_messages, application_id, model_use_image_url, **kwargs)
+            
 
             print(f"[DEBUG][Trajectory {idx}][Step {step_idx}] Model raw response:\n{response}\n")
 

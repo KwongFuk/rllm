@@ -59,6 +59,9 @@ class ToolAgent(BaseAgent):
         self._trajectory = Trajectory()
         self.messages: list[dict[str, Any]] = []
         self.current_observation = None
+        self.image_path =None
+        self.image = None
+
         self.reset()  # Call reset to set initial state
 
     def _format_observation_as_messages(self, obs: Any) -> list[dict]:
@@ -94,6 +97,8 @@ class ToolAgent(BaseAgent):
         obs_messages = self._format_observation_as_messages(observation)
         self.messages.extend(obs_messages)
         self.current_observation = observation
+        self.image_path = observation["image"]
+        self.image = observation["decoded_image"]
 
     def update_from_model(self, response: str, **kwargs) -> Action:
         """

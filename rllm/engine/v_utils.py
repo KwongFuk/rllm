@@ -15,7 +15,7 @@ def convert_image_bytes_to_data_url(image_bytes: bytes, mime_type: str = "image/
     return f"data:{mime_type};base64,{base64_image}"
 
 
-async def ask_openai_gpt4o_with_image_async(image_url: str, prompt: str = "请描述这张图像的内容。", retries: int = 2) -> str:
+async def ask_openai_gpt4o_with_image_async(image_url: str, prompt: str = "请描述这张图像的内容。", application_id = 0, retries: int = 2) -> str:
     client = AsyncOpenAI()
 
     while retries > 0:
@@ -62,11 +62,11 @@ async def main():
 
     # ✅ 转换图像
     image_url = convert_image_bytes_to_data_url(image_bytes)
-
+    application_id = 0
     # ✅ 调用 GPT 模型识别图像
     prompt = question
     print("发送图像给 GPT-4o 分析中...")
-    result = await ask_openai_gpt4o_with_image_async(image_url, prompt)
+    result = await ask_openai_gpt4o_with_image_async(image_url, prompt, application_id)
     print("🧠 GPT-4o 响应：", result)
 
 

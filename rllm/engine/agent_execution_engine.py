@@ -27,7 +27,7 @@ from rllm.router.router import Router
 
 # rllm/rllm/engine/v_utils.py
 
-from rllm.rllm.engine.v_utils import ask_openai_gpt4o_with_image_async, convert_image_bytes_to_data_url
+from rllm.engine.v_utils import ask_openai_gpt4o_with_image_async, convert_image_bytes_to_data_url
 
 logger = logging.getLogger(__name__)
 

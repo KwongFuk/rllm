@@ -2,7 +2,7 @@ import asyncio
 import os
 import sys
 
-from prepare_hotpotqa_data import prepare_hotpotqa_data
+
 from transformers import AutoTokenizer
 
 from rllm.agents.system_prompts import SEARCH_SYSTEM_PROMPT
@@ -25,7 +25,7 @@ async def main():
     os.environ["TAVILY_API_KEY"] = tavily_api_key
 
     n_parallel_agents = 1
-    model_name = "gpt-4o-mini"
+    model_name = "Qwen/Qwen2.5-VL-7B-Instruct"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     mcp_server_command = "npx"
@@ -52,8 +52,8 @@ async def main():
             "mcp_server_env": mcp_server_env,
             "reward_fn": search_reward_fn,
         },
-        engine_name="openai_v",
-        rollout_engine_args={"base_url": "https://api.openai.com/v1", "api_key": "None"},
+        engine_name="openai",
+        rollout_engine_args={"base_url": "http://localhost:30000/v1", "api_key": "None"},
         tokenizer=tokenizer,
         sampling_params=sampling_params,
         max_response_length=16384,

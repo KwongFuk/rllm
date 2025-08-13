@@ -59,8 +59,10 @@ class ToolAgent(BaseAgent):
         self._trajectory = Trajectory()
         self.messages: list[dict[str, Any]] = []
         self.current_observation = None
+
         self.image_path =None
-        self.image = None
+        self.decoded_image = None
+        self.image_bytes = None
 
         self.reset()  # Call reset to set initial state
 
@@ -95,10 +97,15 @@ class ToolAgent(BaseAgent):
 
         # Format the observation for the next model call
         obs_messages = self._format_observation_as_messages(observation)
+
         self.messages.extend(obs_messages)
         self.current_observation = observation
-        self.image_path = observation["image"]
-        self.image = observation["decoded_image"]
+
+        if self.image_path == None:
+            self.image_path = observation["image"]
+            print("image_path:", self.image_path)
+            self.decoded_image = observation["decoded_image"]
+            self.image_bytes = self.decoded_image["bytes"]
 
     def update_from_model(self, response: str, **kwargs) -> Action:
         """
@@ -180,4 +187,8 @@ class MCPToolAgent(ToolAgent):
 
         self._trajectory = Trajectory()
         self.messages: list[dict[str, Any]] = []
+
+        self.image_path =None
+        self.decoded_image = None
+        self.image_bytes = None
         self.reset()

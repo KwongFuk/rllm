@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export NO_PROXY=127.0.0.1,localhost
+export no_proxy=127.0.0.1,localhost
+
+API_URL="http://127.0.0.1:30000/v1/chat/completions"
+MODEL_PATH="/home/smm/.cache/modelscope/hub/models/Qwen/Qwen2___5-VL-7B-Instruct"
+IMAGE_PATH="/home/smm/ggf/rllm/examples/vlm_model/demo.jpeg"
+
+echo "[INFO] 测试文本对话..."
+curl -s "$API_URL" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"$MODEL_PATH\",
+    \"messages\": [{\"role\": \"user\", \"content\": \"你好\"}]
+  }"
+
+echo -e "\n[INFO] 测试多模态对话(本地路径)..."
+curl -s "$API_URL" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"$MODEL_PATH\",
+    \"messages\": [
+      {
+        \"role\": \"user\",
+        \"content\": [
+          {\"type\": \"image_url\", \"image_url\": {\"url\": \"file://$IMAGE_PATH\"}},
+          {\"type\": \"text\", \"text\": \"请详细描述这张图片的内容\"}
+        ]
+      }
+    ],
+    \"max_tokens\": 128
+  }"

@@ -1,77 +1,92 @@
 import asyncio
-import os
-import sys
 
+from transformers import AutoProcessor
 
-from transformers import AutoTokenizer
-
-from rllm.agents.system_prompts import SEARCH_SYSTEM_PROMPT
-from rllm.agents.tool_agent import MCPToolAgent
+from rllm.agents import ToolAgent
 from rllm.data.dataset import DatasetRegistry
 from rllm.engine.agent_execution_engine import AgentExecutionEngine
-from rllm.environments.tools.mcp_env import MCPConnectionManager, MCPEnvironment
-from rllm.rewards.reward_fn import search_reward_fn
-from rllm.utils import save_trajectories
+from rllm.environments.tools.tool_env import ToolEnvironment
+from rllm.rewards.reward_fn import math_reward_fn
+from rllm.utils import compute_pass_at_k_v
 
+if __name__ == "__main__":
+    import os
 
-async def main():
-    if len(sys.argv) < 2:
-        print("Usage: python run_tool_mcp.py <tavily_api_key>")
-        print("This will run HotpotQA evaluation using Tavily MCP server")
-        sys.exit(1)
-
-    tavily_api_key = sys.argv[1]
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    os.environ["TAVILY_API_KEY"] = tavily_api_key
 
-    n_parallel_agents = 1
-    model_name = "Qwen/Qwen2.5-VL-7B-Instruct"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    n_parallel_agents = 2
 
-    mcp_server_command = "npx"
-    mcp_server_args = ["-y", "tavily-mcp@0.2.4"]
-    mcp_server_env = {"TAVILY_API_KEY": tavily_api_key}
+    # model_name = "Qwen/Qwen3-4B"
+    model_name = "/home/smm/.cache/modelscope/hub/models/Qwen/Qwen2___5-VL-7B-Instruct"
 
-    temp_manager = MCPConnectionManager(mcp_server_command, mcp_server_args, mcp_server_env)
-    temp_manager.start()
-    try:
-        mcp_tool_map = temp_manager.tool_map
-        print(f"Available tools: {list(mcp_tool_map.keys())}")
-    finally:
-        temp_manager.stop()
+    # tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model_id = "Qwen/Qwen2.5-VL-7B-Instruct"
+    processor = AutoProcessor.from_pretrained(model_id)
+    tokenizer = processor.tokenizer
+
+    # agent_args = {
+    #         "tools": ["python"],
+    #         "parser_name": "qwen",
+    #         "system_prompt": """You are a math assistant that can write Python to solve math problems.
+    #     You will often be given one or more images along with the problem statement.
+    #     Carefully examine the image(s) to extract all relevant visual information 
+    #     (such as text, numbers, objects, patterns, spatial relations) before answering.
+    #     Describe what you see from the image in your own words, then use that information 
+    #     together with the text of the problem to solve it step-by-step.
+    #     If necessary, write Python code to compute the answer.
+    #     """
+    #     }
+
+
+    agent_args = {
+    "tools": [],  # 不传工具
+    "parser_name": "qwen",
+    "system_prompt": """You are a vision reasoning assistant.
+You will often be given one or more images along with the problem statement.
+Carefully examine the image(s) to extract all relevant visual information 
+(such as text, numbers, objects, patterns, spatial relations) before answering.
+
+Follow this procedure for every problem:
+1. Describe in words what you see in the image.
+2. Identify key numbers, symbols, or relationships from the image and text.
+3. Reason step-by-step to solve the problem without executing any code.
+4. State the final answer on a separate line in the format: ANSWER: <value>
+
+Do not write or execute Python code.
+"""
+}
+
+
+    env_args = {
+        "tools": [],
+        "reward_fn": math_reward_fn,
+    }
 
     sampling_params = {"temperature": 0.6, "top_p": 0.95, "model": model_name}
 
     engine = AgentExecutionEngine(
-        agent_class=MCPToolAgent,
-        env_class=MCPEnvironment,
-        agent_args={"parser_name": "qwen", "system_prompt": SEARCH_SYSTEM_PROMPT, "tool_map": mcp_tool_map},
-        env_args={
-            "mcp_server_command": mcp_server_command,
-            "mcp_server_args": mcp_server_args,
-            "mcp_server_env": mcp_server_env,
-            "reward_fn": search_reward_fn,
-        },
+        agent_class=ToolAgent,
+        agent_args=agent_args,
+        env_class=ToolEnvironment,
+        env_args=env_args,
         engine_name="openai",
         rollout_engine_args={"base_url": "http://localhost:30000/v1", "api_key": "None"},
         tokenizer=tokenizer,
         sampling_params=sampling_params,
-        max_response_length=16384,
-        max_prompt_length=4096,
+        max_response_length=4096,
+        max_prompt_length=2048,
         n_parallel_agents=n_parallel_agents,
     )
 
     test_dataset = DatasetRegistry.load_dataset("MathVision", "test")
+    # if test_dataset is None:
+    #     print("Dataset not found, preparing dataset...")
+    #     from prepare_math_data import prepare_math_data
 
-    tasks = test_dataset.get_data()[:10]
-    print(f"Running evaluation on {len(tasks)} tasks...")
+    #     _, test_dataset = prepare_math_data()
 
-    try:
-        results = await engine.execute_tasks(tasks)
-        save_trajectories(results, save_dir="./trajectories/v_mcp_tavily", filename="trajectories.pt")
-    finally:
-        MCPEnvironment.cleanup_global_resources()
+    tasks = test_dataset.get_data()[:5]
+    # tasks = test_dataset.repeat(n=1)  # repeat to evaluate pass@k
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    results = asyncio.run(engine.execute_tasks(tasks))
+    compute_pass_at_k_v(results)

@@ -34,7 +34,7 @@ def prepare_hotpotqa_data(train_size=None, test_size=None):
     print("Loading HotpotQA dataset from local file...")
 
     # 加载本地 JSON 文件
-    with open("/home/yue/guangfu/data/hotpot/hotpot_dev_distractor_v1.json", "r") as f:
+    with open("/home/smm/ggf/data/hotpot/hotpot_dev_distractor_v1.json", "r") as f:
         raw_data = json.load(f)
 
     # 清洗字段，构造简洁结构，只保留 question 和 answer

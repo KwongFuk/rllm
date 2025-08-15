@@ -28,6 +28,7 @@ from datasets import load_dataset
 
 from rllm.data.dataset import DatasetRegistry
 import re
+import os
 
 def preprocess_mathv360k_fn(example, idx):
     """
@@ -89,6 +90,7 @@ def preprocess_mathvision_fn(sample):
     将样本转换为统一格式：
     - 将 'answer' 重命名为 'groundtruth'
     - 添加 'data_source' 字段
+    - 基于原 'image' 字段生成 'image_url_local'
     - 保留其他字段
     """
     new_sample = sample.copy()
@@ -99,7 +101,13 @@ def preprocess_mathvision_fn(sample):
     # 添加新字段
     new_sample["data_source"] = "MathVision"
 
+    # 基于原 image 字段拼接本地路径
+    base_path = "/home/smm/.cache/huggingface/datasets/MathLLMs/MathVision-images/"
+    if "image" in new_sample:
+        new_sample["image_url_local"] = os.path.join(base_path, new_sample["image"])
+
     return new_sample
+
 
 
 def prepare_math_data():

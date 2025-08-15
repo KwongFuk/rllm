@@ -168,11 +168,51 @@ class QwenChatTemplateParser(ChatTemplateParser):
         return self.system_token + message["content"] + self.eot_token
 
     def parse_user(self, message):
-        return self.user_token + message["content"] + self.eot_token
+        content = message["content"]
+
+        # 如果是多模态结构（list），进行格式化
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if part["type"] == "text":
+                    parts.append(part["text"])
+                elif part["type"] == "image_url":
+                    parts.append("<image>")  # 或者用你的自定义 token，如 <img>、<|image|> 等
+            formatted = "\n".join(parts)
+        else:
+            formatted = content  # 单一字符串
+
+        return self.user_token + formatted + self.eot_token
+
+
+    # def parse_user(self, message):
+    #     return self.user_token + message["content"] + self.eot_token
+
+
 
     def parse_assistant(self, message):
-        result = self.assistant_token + message["content"] + self.eot_token
+        # 打印整个 message 对象
+        # print(f"[DEBUG] parse_assistant: full message = {message}")
+
+        content = message["content"]
+
+        # 打印 content 类型和内容
+        # print(f"[DEBUG] parse_assistant: content type = {type(content)}, value = {content}")
+
+        # 如果不是字符串，尝试从 ChatCompletion 对象提取
+        if not isinstance(content, str):
+            try:
+                # OpenAI/Qwen 风格的返回结构
+                content = content.choices[0].message.content
+                # print(f"[DEBUG] Extracted string content: {content}")
+            except Exception as e:
+                raise TypeError(
+                    f"Unsupported content type for assistant message: {type(content)}, error: {e}"
+                )
+
+        result = self.assistant_token + content + self.eot_token
         return result
+
 
     def parse_tool(self, message):
         return self.user_token + self.tool_response_start_token + message["content"] + self.tool_response_end_token + self.eot_token

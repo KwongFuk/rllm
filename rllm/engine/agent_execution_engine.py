@@ -119,7 +119,15 @@ class AgentExecutionEngine:
         else:
             self.chat_parser = chat_parser
 
-    async def get_model_response(self, prompt, application_id, model_use_image_url = None, **kwargs):
+    def has_image_url(self, messages):
+        return any(
+            isinstance(item, dict) and item.get("type") == "image_url"
+            for msg in messages if isinstance(msg, dict) and isinstance(msg.get("content"), list)
+            for item in msg["content"]
+        )
+
+
+    async def get_model_response(self, prompt, application_id, image_url = None, **kwargs):
         """
         Compute model response asynchronously based on the engine type.
 
@@ -138,13 +146,18 @@ class AgentExecutionEngine:
             NotImplementedError: If the engine type is not supported
 
         """
-        print("***prompt***", prompt)
+        # print("***prompt***", prompt)
         if self.engine_name == "openai":
-            return await self._get_openai_async(prompt, application_id, **kwargs)
+            
+            if isinstance(prompt, list) and self.has_image_url(prompt):
+                print("_get_openai_async_v")
+                return await self._get_openai_async_v(prompt, application_id,**kwargs)
+            else:
+                print("_get_openai_async")
+                return await self._get_openai_async(prompt, application_id, **kwargs)
+
         elif self.engine_name == "verl":
             return await self._get_verl_async(prompt, application_id, **kwargs)
-        elif self.engine_name == "openai_v":
-            return await ask_openai_gpt4o_with_image_async(model_use_image_url, prompt, application_id,**kwargs)
         else:
             raise NotImplementedError(f"Engine type '{self.engine_name}' not supported")
 
@@ -207,6 +220,7 @@ class AgentExecutionEngine:
             retries = self.api_retries
             while retries > 0:
                 try:
+                    
                     response = await self.client.completions.create(
                         prompt=prompt_text,
                         timeout=3600,
@@ -214,6 +228,8 @@ class AgentExecutionEngine:
                         **kwargs,
                     )
                     return response
+
+
                 except openai.RateLimitError:
                     retries -= 1
                     if retries == 0:
@@ -226,6 +242,8 @@ class AgentExecutionEngine:
 
         # If prompt is in chat format, convert it to text format
         prompt_text = prompt
+        print("prompt from _get_openai_async",prompt)
+
         if isinstance(prompt, list) and all(isinstance(msg, dict) for msg in prompt):
             prompt_text = self.chat_parser.parse(prompt, add_generation_prompt=True, is_first_msg=True)
 
@@ -233,6 +251,57 @@ class AgentExecutionEngine:
         if isinstance(response, Completion):
             response = response.choices[0].text
         return response
+
+
+    async def _get_openai_async_v(self, messages, _, **kwargs):
+        """
+        Get action from OpenAI API asynchronously with retry logic.
+
+        Args:
+            prompt: The input prompt in text format for completions API
+            application_id: Unique identifier for the application (unused for OpenAI)
+            **kwargs: Additional arguments to pass to the OpenAI API
+
+        Returns:
+            The response from OpenAI API
+        """
+
+        async def get_response(prompt_text: str):
+            retries = self.api_retries
+            while retries > 0:
+                try:
+                    
+                    response = await self.client.chat.completions.create(
+                        messages=messages,
+                        timeout=3600,
+                        **self.sampling_params,
+                        **kwargs,
+                    )
+                    return response
+
+
+                except openai.RateLimitError:
+                    retries -= 1
+                    if retries == 0:
+                        return "Error: Rate limit reached and retries exhausted."
+                    logger.info("Sleep for 5 seconds for API limit.")
+                    await asyncio.sleep(5)
+                except Exception as e:
+                    logger.error("Error: %s", e)
+                    return f"Error processing content: {e}"
+
+        # print("messages from _get_openai_async:", messages)
+
+        response = await get_response(messages)
+
+        if isinstance(response, Completion):
+            response = response.choices[0].message.content
+
+        print("messages from _get_openai_async:", messages)
+        print("response from _get_openai_async:", response)
+
+        return response
+
 
     async def run_agent_trajectory_async(self, idx, application_id, seed=0, mode="Text", **kwargs):
         """Run a single agent's trajectory asynchronously"""
@@ -271,12 +340,16 @@ class AgentExecutionEngine:
             info=info,
         )
         messages = agent.chat_completions
+        
+        image_url_local = None
+        # image = agent.image
+        # image_path = agent.image_path
+        # image_bytes = agent.image_bytes
+        # model_use_image_url = convert_image_bytes_to_data_url(image_bytes)
 
-        image = agent.image
-        image_path = agent.image_path
-        image_bytes = agent.image_bytes
-        model_use_image_url = convert_image_bytes_to_data_url(image_bytes)
-        print("****image_path****",image_path)
+        # image_url_local = agent.image_url_local
+        # print("****image_path****",image_path)
+        # print("****image_path****",image_url_local)
       
 
         prompt_tokens, _ = convert_messages_to_tokens_and_masks(messages, tokenizer=self.tokenizer, parser=self.chat_parser, contains_first_msg=True, contains_generation_msg=True)
@@ -310,7 +383,7 @@ class AgentExecutionEngine:
 
 
             
-            response = await self.get_model_response(prompt_messages, application_id, model_use_image_url, **kwargs)
+            response = await self.get_model_response(prompt_messages, application_id, image_url_local, **kwargs)
             
 
             print(f"[DEBUG][Trajectory {idx}][Step {step_idx}] Model raw response:\n{response}\n")

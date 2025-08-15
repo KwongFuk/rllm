@@ -63,15 +63,32 @@ class ToolAgent(BaseAgent):
         self.image_path =None
         self.decoded_image = None
         self.image_bytes = None
+        self.image_url_local = None
 
         self.reset()  # Call reset to set initial state
 
     def _format_observation_as_messages(self, obs: Any) -> list[dict]:
         """Helper to format observation into messages."""
         messages = []
+
         if isinstance(obs, dict):
             if "question" in obs:
-                messages.append({"role": "user", "content": obs["question"]})
+                question = obs["question"]
+                if "image_url_local" in obs:
+                    image_url = "file://" + obs["image_url_local"]
+                    messages.append({
+                        "role": "user", 
+                        "content": [
+                        {"type": "text", "text": question },
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                        ],
+            })  
+                else:
+                    messages.append({
+                        "role": "user", 
+                        "content": question,
+            })  
+
             elif "tool_outputs" in obs:
                 # Format tool outputs from environment observation
                 for tool_call_id, tool_output_str in obs["tool_outputs"].items():
@@ -100,12 +117,6 @@ class ToolAgent(BaseAgent):
 
         self.messages.extend(obs_messages)
         self.current_observation = observation
-
-        if self.image_path == None:
-            self.image_path = observation["image"]
-            print("image_path:", self.image_path)
-            self.decoded_image = observation["decoded_image"]
-            self.image_bytes = self.decoded_image["bytes"]
 
     def update_from_model(self, response: str, **kwargs) -> Action:
         """
@@ -191,4 +202,5 @@ class MCPToolAgent(ToolAgent):
         self.image_path =None
         self.decoded_image = None
         self.image_bytes = None
+        self.image_url_local = None
         self.reset()

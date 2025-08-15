@@ -1,6 +1,8 @@
 import os
 import time
 from collections import defaultdict
+import json
+import hashlib
 
 import openai
 import torch
@@ -11,6 +13,41 @@ from vertexai.generative_models import GenerationConfig, GenerativeModel, HarmBl
 
 from rllm.globals import GCP_LOCATION, GCP_PROJECT_ID, GEMINI_MODEL, OAI_RM_MODEL
 
+
+def compute_pass_at_k_v(results):
+    problem_correct_map: defaultdict[str, int] = defaultdict(int)
+    problem_total_map: defaultdict[str, int] = defaultdict(int)
+
+    # 自动处理无法序列化的字段，比如 bytes -> '<binary>'
+    def safe_default(obj):
+        if isinstance(obj, bytes):
+            return "<binary>"  # 或者用 base64.b64encode(obj).decode()
+        return str(obj)
+
+    for trajectory in results:
+        task = trajectory.task
+
+        if isinstance(task, dict):
+            problem_str = json.dumps(task, sort_keys=True, default=safe_default)
+        else:
+            problem_str = str(task)
+
+        problem_hash = hashlib.md5(problem_str.encode()).hexdigest()
+        is_correct = 1 if trajectory.reward > 0 else 0
+        problem_correct_map[problem_hash] += is_correct
+        problem_total_map[problem_hash] += 1
+
+    if len(problem_total_map) == 0:
+        print("No valid problems to evaluate.")
+        return
+
+    total_problems = len(problem_correct_map)
+    pass_at_1 = sum(problem_correct_map.values()) / sum(problem_total_map.values())
+    pass_at_k = sum(1 for problem, correct in problem_correct_map.items() if correct > 0) / total_problems
+
+    print("Total unique problems:", total_problems)
+    print("Average Pass@1 Accuracy:", pass_at_1)
+    print("Average Pass@k Accuracy:", pass_at_k)
 
 def compute_pass_at_k(results):
     import hashlib

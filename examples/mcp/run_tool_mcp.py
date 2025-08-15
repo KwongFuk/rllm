@@ -3,7 +3,7 @@ import os
 import sys
 
 from prepare_hotpotqa_data import prepare_hotpotqa_data
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoProcessor
 
 from rllm.agents.system_prompts import SEARCH_SYSTEM_PROMPT
 from rllm.agents.tool_agent import MCPToolAgent
@@ -12,6 +12,8 @@ from rllm.engine.agent_execution_engine import AgentExecutionEngine
 from rllm.environments.tools.mcp_env import MCPConnectionManager, MCPEnvironment
 from rllm.rewards.reward_fn import search_reward_fn
 from rllm.utils import save_trajectories
+
+
 
 
 async def main():
@@ -25,8 +27,14 @@ async def main():
     os.environ["TAVILY_API_KEY"] = tavily_api_key
 
     n_parallel_agents = 4
-    model_name = "Qwen/Qwen3-4B"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # model_name = "Qwen/Qwen3-4B"
+    model_name = "/home/smm/.cache/modelscope/hub/models/Qwen/Qwen2___5-VL-7B-Instruct"
+
+    model_id = "Qwen/Qwen2.5-VL-7B-Instruct"
+    processor = AutoProcessor.from_pretrained(model_id)
+    tokenizer = processor.tokenizer
+
+    # tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     mcp_server_command = "npx"
     mcp_server_args = ["-y", "tavily-mcp@0.2.4"]
@@ -56,7 +64,7 @@ async def main():
         rollout_engine_args={"base_url": "http://localhost:30000/v1", "api_key": "None"},
         tokenizer=tokenizer,
         sampling_params=sampling_params,
-        max_response_length=16384,
+        max_response_length=4096,
         max_prompt_length=4096,
         n_parallel_agents=n_parallel_agents,
     )

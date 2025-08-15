@@ -47,9 +47,10 @@ python -m vllm.entrypoints.openai.api_server \
   --swap-space 16 \
   --disable-custom-all-reduce \
   --enforce-eager \
-  --allowed-local-media-path /home/smm/ggf/rllm/examples/vlm_model \
+  --allowed-local-media-path /home/smm/.cache/huggingface/datasets/  \
   2>&1 | tee -a "${LOG_FILE}"
-
+  
+  # --allowed-local-media-path /home/smm/ggf/rllm/examples/vlm_model   \
 
 
 

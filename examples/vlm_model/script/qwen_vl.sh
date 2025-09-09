@@ -2,12 +2,13 @@
 set -euo pipefail
 
 # ==== 配置部分 ====
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=0
 unset NCCL_P2P_DISABLE
 unset NCCL_IB_DISABLE
 
 PORT=30000
-MODEL="/home/smm/.cache/modelscope/hub/models/Qwen/Qwen2___5-VL-7B-Instruct"
+# MODEL="/home/smm/.cache/modelscope/hub/models/Qwen/Qwen2___5-VL-7B-Instruct"
+MODEL="/home/guoguangfu/.cache/modelscope/hub/models/Qwen/Qwen2-VL-2B-Instruct"
 
 LIMIT_MM='{"image": 3, "video": 0}'
 MM_KWARGS='{}'
